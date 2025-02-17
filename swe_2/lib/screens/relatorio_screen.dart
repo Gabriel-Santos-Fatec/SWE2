@@ -9,7 +9,10 @@ class ProgressoEngenheirosScreen extends StatefulWidget {
   const ProgressoEngenheirosScreen({super.key});
 
   @override
+<<<<<<< Updated upstream
   // ignore: library_private_types_in_public_api
+=======
+>>>>>>> Stashed changes
   _ProgressoEngenheirosScreenState createState() =>
       _ProgressoEngenheirosScreenState();
 }
@@ -19,7 +22,11 @@ class _ProgressoEngenheirosScreenState
   final DBHelper _dbHelper = DBHelper();
   List<Engenheiro> _engenheiros = [];
   Map<int, double> _horasTrabalhadas = {};
+<<<<<<< Updated upstream
   List<Tarefa> _tarefas = [];
+=======
+  Map<int, List<Tarefa>> _tarefasEngenheiro = {};
+>>>>>>> Stashed changes
   Timer? _timer;
 
   @override
@@ -43,18 +50,32 @@ class _ProgressoEngenheirosScreenState
     List<Engenheiro> engenheiros = await _dbHelper.listarEngenheiros();
     List<Tarefa> tarefas = await _dbHelper.listarTarefas();
     Map<int, double> horasTrabalhadas = {};
+<<<<<<< Updated upstream
+=======
+    Map<int, List<Tarefa>> tarefasEngenheiro = {};
+>>>>>>> Stashed changes
 
     for (var engenheiro in engenheiros) {
       double horas = await _dbHelper.obterTempoTotalTrabalhadoHoje(
         engenheiro.id!,
       );
       horasTrabalhadas[engenheiro.id!] = horas;
+<<<<<<< Updated upstream
+=======
+      tarefasEngenheiro[engenheiro.id!] =
+          tarefas.where((t) => t.idEngenheiro == engenheiro.id).toList();
+>>>>>>> Stashed changes
     }
 
     setState(() {
       _engenheiros = engenheiros;
+<<<<<<< Updated upstream
       _tarefas = tarefas;
       _horasTrabalhadas = horasTrabalhadas;
+=======
+      _horasTrabalhadas = horasTrabalhadas;
+      _tarefasEngenheiro = tarefasEngenheiro;
+>>>>>>> Stashed changes
     });
   }
 
@@ -63,10 +84,15 @@ class _ProgressoEngenheirosScreenState
       for (var engenheiro in _engenheiros) {
         double totalHoras = _horasTrabalhadas[engenheiro.id!] ?? 0;
 
+<<<<<<< Updated upstream
         for (var tarefa in _tarefas) {
           if (tarefa.idEngenheiro == engenheiro.id &&
               tarefa.status == "Em andamento" &&
               tarefa.inicio != null) {
+=======
+        for (var tarefa in _tarefasEngenheiro[engenheiro.id!] ?? []) {
+          if (tarefa.status == "Em andamento" && tarefa.inicio != null) {
+>>>>>>> Stashed changes
             Duration tempoDecorrido = DateTime.now().difference(tarefa.inicio!);
             totalHoras += tempoDecorrido.inMinutes / 60.0;
           }
@@ -162,6 +188,20 @@ class _ProgressoEngenheirosScreenState
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
+<<<<<<< Updated upstream
+=======
+                          SizedBox(height: 10),
+                          Divider(),
+                          Text(
+                            "Tarefas atribuídas:",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 5),
+                          _buildListaTarefas(engenheiro),
+>>>>>>> Stashed changes
                         ],
                       ),
                     ),
@@ -171,6 +211,81 @@ class _ProgressoEngenheirosScreenState
     );
   }
 
+<<<<<<< Updated upstream
+=======
+  Widget _buildListaTarefas(Engenheiro engenheiro) {
+    List<Tarefa> tarefas = _tarefasEngenheiro[engenheiro.id!] ?? [];
+
+    if (tarefas.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Text(
+          "Nenhuma tarefa atribuída",
+          style: TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
+        ),
+      );
+    }
+
+    return Column(
+      children:
+          tarefas.map((tarefa) {
+            double tempoEstimado = tarefa.tempo / engenheiro.eficiencia;
+
+            return Card(
+              margin: EdgeInsets.symmetric(vertical: 5, horizontal: 8),
+              elevation: 3,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Padding(
+                padding: EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      tarefa.nome,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    _buildInfoRow("Status: ${tarefa.status}"),
+                    _buildInfoRow(
+                      "Tempo da Tarefa: ${_formatarHorasMinutos(tarefa.tempo.toDouble())}",
+                    ),
+                    _buildInfoRow(
+                      "Estimado com eficiência: ${_formatarHorasMinutos(tempoEstimado)}",
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+    );
+  }
+
+  Widget _buildInfoRow(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: Colors.blue, // Mesma cor do gráfico
+              shape: BoxShape.circle,
+            ),
+          ),
+          SizedBox(width: 8),
+          Expanded(child: Text(text, style: TextStyle(fontSize: 14))),
+        ],
+      ),
+    );
+  }
+
+>>>>>>> Stashed changes
   String _formatarHorasMinutos(double horasDecimais) {
     int horas = horasDecimais.floor();
     int minutos = ((horasDecimais - horas) * 60).round();
