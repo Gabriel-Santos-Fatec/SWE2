@@ -153,6 +153,10 @@ class DBHelper {
           tarefa['UltimoInicio'] != null
               ? DateTime.parse(tarefa['UltimoInicio'])
               : null;
+      DateTime? ultimaPausa =
+          tarefa['UltimaPausa'] != null
+              ? DateTime.parse(tarefa['UltimaPausa'])
+              : null;
       int tempoGastoHoje = tarefa['TempoGastoHoje'] ?? 0;
       int tempoGasto = tarefa['TempoGasto'] ?? 0;
 
@@ -160,6 +164,12 @@ class DBHelper {
         int minutosGastos = agora.difference(ultimoInicio).inMinutes;
         tempoGastoHoje += minutosGastos;
         tempoGasto += minutosGastos;
+      }
+
+      // Se houver uma última pausa, soma (agora - última pausa)
+      if (ultimaPausa != null) {
+        int minutosDesdeUltimaPausa = agora.difference(ultimaPausa).inMinutes;
+        tempoGasto += minutosDesdeUltimaPausa;
       }
 
       // Se o dia mudou, zera `tempoGastoHoje`

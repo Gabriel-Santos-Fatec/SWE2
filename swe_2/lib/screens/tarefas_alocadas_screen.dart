@@ -151,7 +151,7 @@ class _TarefasAlocadasScreenState extends State<TarefasAlocadasScreen> {
     setState(() {
       tarefa.status = "Em andamento";
       tarefa.ultimoInicio = DateTime.now();
-      tarefa.inicio = DateTime.now();
+      tarefa.inicio = tarefa.inicio ?? DateTime.now();
     });
   }
 
@@ -163,6 +163,7 @@ class _TarefasAlocadasScreenState extends State<TarefasAlocadasScreen> {
       final tarefa = _tarefas.firstWhere((t) => t.id == id);
       tarefa.status = "Concluída";
       tarefa.conclusao = DateTime.now();
+      _carregarTarefas();
     });
   }
 
@@ -332,8 +333,20 @@ class _TarefasAlocadasScreenState extends State<TarefasAlocadasScreen> {
                               Text(
                                 "Conclusão: ${_formatarDataConclusao(tarefa.conclusao)}",
                               ),
-                              Text(
-                                "Tempo Previsto: ${_formatarTempoTrabalhado(_calcularTempoPrevisto(tarefa, engenheiro))} - ${_calcularDiasNecessarios(tarefa, engenheiro)} dia(s)",
+                              Row(
+                                children: [
+                                  Text(
+                                    "Tempo Previsto: ${_formatarTempoTrabalhado(_calcularTempoPrevisto(tarefa, engenheiro))}",
+                                  ),
+                                  tarefa.idEngenheiro != null
+                                      ? Text(" - ")
+                                      : Center(),
+                                  tarefa.idEngenheiro != null
+                                      ? Text(
+                                        "${_calcularDiasNecessarios(tarefa, engenheiro)} dia(s)",
+                                      )
+                                      : Center(),
+                                ],
                               ),
                               Text(
                                 "Tempo Trabalhado: ${_obterTempoTotalTrabalhado(tarefa)}",

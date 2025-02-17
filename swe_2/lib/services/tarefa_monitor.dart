@@ -13,6 +13,7 @@ class TarefaMonitor {
 
   TarefaMonitor._internal() {
     _iniciarMonitoramento();
+    _verificarTarefasAtivas();
   }
 
   // Inicia o monitoramento e verifica as tarefas a cada 15 segundos

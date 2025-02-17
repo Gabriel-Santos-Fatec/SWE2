@@ -218,13 +218,15 @@ class _ProgressoEngenheirosScreenState
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _construirLinhaInfo("Tarefa: ${tarefa.nome}"),
-                _construirLinhaInfo("Status: ${tarefa.status}"),
+                _construirLinhaInfo(tarefa.nome, true),
+                _construirLinhaInfo("Status: ${tarefa.status}", false),
                 _construirLinhaInfo(
                   "Tempo da Tarefa: ${_formatarHorasMinutos(tarefa.tempo.toDouble())}",
+                  false,
                 ),
                 _construirLinhaInfo(
                   "Estimado com eficiência: ${_formatarHorasMinutos(tempoEstimado)}",
+                  false,
                 ),
               ],
             );
@@ -232,7 +234,7 @@ class _ProgressoEngenheirosScreenState
     );
   }
 
-  Widget _construirLinhaInfo(String texto) {
+  Widget _construirLinhaInfo(String texto, bool negrito) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
@@ -241,12 +243,20 @@ class _ProgressoEngenheirosScreenState
             width: 8,
             height: 8,
             decoration: BoxDecoration(
-              color: Colors.blue,
+              color: !negrito ? Colors.white : Colors.blue,
               shape: BoxShape.circle,
             ),
           ),
           SizedBox(width: 8),
-          Expanded(child: Text(texto, style: TextStyle(fontSize: 14))),
+          Expanded(
+            child: Text(
+              texto,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: negrito ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ),
         ],
       ),
     );
