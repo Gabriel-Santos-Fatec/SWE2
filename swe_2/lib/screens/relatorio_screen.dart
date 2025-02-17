@@ -26,7 +26,6 @@ class _ProgressoEngenheirosScreenState
     super.initState();
     _carregarDados();
 
-    // Atualiza os dados a cada 15 segundos
     _timer = Timer.periodic(Duration(seconds: 15), (timer) {
       _carregarDados();
     });
@@ -38,6 +37,7 @@ class _ProgressoEngenheirosScreenState
     super.dispose();
   }
 
+  // Obtenção de dados
   Future<void> _carregarDados() async {
     List<Engenheiro> engenheiros = await _dbHelper.listarEngenheiros();
     List<Tarefa> tarefas = await _dbHelper.listarTarefas();
@@ -58,8 +58,7 @@ class _ProgressoEngenheirosScreenState
     });
   }
 
-  /// Calcula a soma de `tempoGastoHoje` das tarefas do engenheiro.
-  /// Se a tarefa estiver em andamento, soma `agora - ultimoInicio`
+  // Calcula a soma de `tempoGastoHoje` das tarefas do engenheiro.
   double _calcularTempoTrabalhadoHoje(
     Engenheiro engenheiro,
     List<Tarefa> tarefas,

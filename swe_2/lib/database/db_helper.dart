@@ -347,4 +347,37 @@ class DBHelper {
 
     return (resultado.first['TotalHoras'] ?? 0.0).toDouble();
   }
+
+  // Verifica se a última data registrada é de um dia diferente e caso for zera o campo
+  Future<void> zerarTempoGastoHoje() async {
+    final db = await database;
+
+    String dataHoje = DateTime.now().toIso8601String().substring(0, 10);
+
+    List<Map<String, dynamic>> resultado = await db.query(
+      'Tarefas',
+      columns: ['UltimaPausa'],
+      orderBy: 'UltimaPausa DESC',
+      limit: 1,
+    );
+    print(dataHoje);
+
+    if (resultado.isNotEmpty) {
+      String? ultimaData = resultado.first['UltimaPausa'];
+
+      if (ultimaData != null && ultimaData.substring(0, 10) != dataHoje) {
+        await db.update('Tarefas', {'TempoGastoHoje': 0});
+      }
+    }
+  }
+
+  Future<void> zerarTempoGastoHojePorTarefa(int idTarefa) async {
+    final db = await database;
+    await db.update(
+      'Tarefas',
+      {'TempoGastoHoje': 0},
+      where: 'Id = ?',
+      whereArgs: [idTarefa],
+    );
+  }
 }

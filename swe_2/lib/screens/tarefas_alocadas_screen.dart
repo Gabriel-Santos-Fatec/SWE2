@@ -41,6 +41,7 @@ class _TarefasAlocadasScreenState extends State<TarefasAlocadasScreen> {
     super.dispose();
   }
 
+  /// Carrega as tarefas e os engenheiros do banco de dados
   Future<void> _carregarTarefas() async {
     setState(() {
       _carregando = true;
@@ -60,6 +61,7 @@ class _TarefasAlocadasScreenState extends State<TarefasAlocadasScreen> {
     _atualizarTempoTarefasAtivas();
   }
 
+  /// Aloca tarefas automaticamente
   Future<void> _alocarTarefas() async {
     setState(() {
       _carregando = true;
@@ -69,6 +71,7 @@ class _TarefasAlocadasScreenState extends State<TarefasAlocadasScreen> {
     await _carregarTarefas();
   }
 
+  /// Atualiza o tempo das tarefas em andamento
   void _atualizarTempoTarefasAtivas() async {
     setState(() {
       for (var tarefa in _tarefas) {
@@ -104,7 +107,7 @@ class _TarefasAlocadasScreenState extends State<TarefasAlocadasScreen> {
           });
 
       int cargaMaximaMinutos = (engenheiro.cargaMaxima * 60).toInt();
-      if (totalTempoGastoHoje * 60 >= cargaMaximaMinutos) {
+      if (totalTempoGastoHoje >= cargaMaximaMinutos) {
         Tarefa? tarefaAtiva = _tarefas.firstWhereOrNull(
           (tarefa) =>
               tarefa.idEngenheiro == engenheiro.id &&
@@ -120,6 +123,7 @@ class _TarefasAlocadasScreenState extends State<TarefasAlocadasScreen> {
     }
   }
 
+  /// Inicia uma tarefa
   void _iniciarTarefa(int id) async {
     final tarefa = _tarefas.firstWhere((t) => t.id == id);
     final engenheiro = _engenheiros[tarefa.idEngenheiro];
@@ -151,6 +155,7 @@ class _TarefasAlocadasScreenState extends State<TarefasAlocadasScreen> {
     });
   }
 
+  /// Conclui uma tarefa
   void _concluirTarefa(int id) async {
     await _dbHelper.concluirTarefa(id);
 
@@ -161,6 +166,7 @@ class _TarefasAlocadasScreenState extends State<TarefasAlocadasScreen> {
     });
   }
 
+  /// Pausa uma tarefa
   void _pausarTarefa(int id) async {
     final tarefa = _tarefas.firstWhere((t) => t.id == id);
 
@@ -171,9 +177,8 @@ class _TarefasAlocadasScreenState extends State<TarefasAlocadasScreen> {
         int minutosDecorridos =
             DateTime.now().difference(tarefa.ultimoInicio!).inMinutes;
 
-        tarefa.tempoGastoHoje =
-            (tarefa.tempoGastoHoje ?? 0) + minutosDecorridos;
-        tarefa.tempoGasto = (tarefa.tempoGasto ?? 0) + minutosDecorridos;
+        tarefa.tempoGastoHoje = (tarefa.tempoGastoHoje) + minutosDecorridos;
+        tarefa.tempoGasto = (tarefa.tempoGasto) + minutosDecorridos;
         tarefa.status = "Pausada";
         tarefa.ultimoInicio = null;
         tarefa.ultimaPausa = DateTime.now();
@@ -181,22 +186,26 @@ class _TarefasAlocadasScreenState extends State<TarefasAlocadasScreen> {
     }
   }
 
+  /// Formata o tempo trabalhado em horas e minutos
   String _formatarDataInicio(DateTime? data) {
     if (data == null) return "Não iniciado";
     return DateFormat("dd/MM/yyyy HH:mm").format(data);
   }
 
+  /// Formata a data de conclusão
   String _formatarDataConclusao(DateTime? data) {
     if (data == null) return "Não concluído";
     return DateFormat("dd/MM/yyyy HH:mm").format(data);
   }
 
+  /// Formata o tempo trabalhado
   String _formatarTempoTrabalhado(double tempoTrabalhado) {
     int horas = tempoTrabalhado.floor();
     int minutos = ((tempoTrabalhado - horas) * 60).round();
     return "${horas}h ${minutos}min";
   }
 
+  /// Formata o tempo gasto
   String _formatarTempoGasto(int minutosTotais) {
     int horas = minutosTotais ~/ 60;
     int minutos = minutosTotais % 60;
@@ -210,12 +219,14 @@ class _TarefasAlocadasScreenState extends State<TarefasAlocadasScreen> {
     }
   }
 
+  // Calcula o tempo previsto com base na eficiência do engenheiro
   double _calcularTempoPrevisto(Tarefa tarefa, Engenheiro? engenheiro) {
     if (engenheiro == null) return tarefa.tempo.toDouble();
 
     return tarefa.tempo * (2 - engenheiro.eficiencia);
   }
 
+  // Calcula os dias necessários para executar a tarefa com a carga mnáxima do engenheiro
   int _calcularDiasNecessarios(Tarefa tarefa, Engenheiro? engenheiro) {
     if (engenheiro == null || engenheiro.cargaMaxima <= 0) return 1;
 
@@ -223,6 +234,7 @@ class _TarefasAlocadasScreenState extends State<TarefasAlocadasScreen> {
     return (tempoPrevisto / engenheiro.cargaMaxima).ceil();
   }
 
+  // Obtém o total trabalhado
   String _obterTempoTotalTrabalhado(Tarefa tarefa) {
     int tempoGasto = tarefa.tempoGasto;
 

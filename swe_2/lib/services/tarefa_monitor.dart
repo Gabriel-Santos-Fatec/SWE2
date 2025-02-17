@@ -12,7 +12,7 @@ class TarefaMonitor {
   Timer? _timer;
 
   TarefaMonitor._internal() {
-    _iniciarMonitoramento(); // O monitor inicia automaticamente
+    _iniciarMonitoramento();
   }
 
   /// Inicia o monitoramento e verifica as tarefas a cada 15 segundos
@@ -25,6 +25,8 @@ class TarefaMonitor {
 
   /// Verifica todas as tarefas em andamento e pausa se necessário
   Future<void> _verificarTarefasAtivas() async {
+    await _verificarMudancaDeDia();
+
     List<Tarefa> tarefas = await _dbHelper.listarTarefas();
     List<Engenheiro> engenheiros = await _dbHelper.listarEngenheiros();
     Map<int, Engenheiro> engenheirosMap = {
@@ -44,6 +46,7 @@ class TarefaMonitor {
       }
     }
 
+    // Verifica se o engenheiro já atingiu o limite diário e pausa a tarefa ativa
     for (var engenheiro in engenheirosMap.values) {
       int totalTempoGastoHoje = tarefas
           .where((t) => t.idEngenheiro == engenheiro.id)
@@ -64,13 +67,31 @@ class TarefaMonitor {
 
       int cargaMaximaMinutos = (engenheiro.cargaMaxima * 60).toInt();
 
-      if (totalTempoGastoHoje * 60 >= cargaMaximaMinutos) {
+      if (totalTempoGastoHoje >= cargaMaximaMinutos) {
         Tarefa? tarefaAtiva = tarefas.firstWhereOrNull(
           (t) => t.idEngenheiro == engenheiro.id && t.status == "Em andamento",
         );
 
         if (tarefaAtiva != null) {
           await _dbHelper.pausarTarefaComTempo(tarefaAtiva.id!);
+        }
+      }
+    }
+  }
+
+  /// Verifica se o dia mudou e zera o `tempoGastoHoje` das tarefas caso necessário
+  Future<void> _verificarMudancaDeDia() async {
+    DateTime hoje = DateTime.now();
+    List<Tarefa> tarefas = await _dbHelper.listarTarefas();
+
+    for (var tarefa in tarefas) {
+      if (tarefa.ultimaPausa != null) {
+        DateTime ultimaPausa = tarefa.ultimaPausa!;
+
+        if (ultimaPausa.year != hoje.year ||
+            ultimaPausa.month != hoje.month ||
+            ultimaPausa.day != hoje.day) {
+          await _dbHelper.zerarTempoGastoHojePorTarefa(tarefa.id!);
         }
       }
     }
