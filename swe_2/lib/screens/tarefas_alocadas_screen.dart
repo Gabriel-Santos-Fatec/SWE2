@@ -185,8 +185,7 @@ class _TarefasAlocadasScreenState extends State<TarefasAlocadasScreen> {
   double _calcularTempoPrevisto(Tarefa tarefa, Engenheiro? engenheiro) {
     if (engenheiro == null) return tarefa.tempo.toDouble();
 
-    double eficiencia = engenheiro.eficiencia;
-    return tarefa.tempo / eficiencia;
+    return tarefa.tempo * (2 - engenheiro.eficiencia);
   }
 
   int _calcularDiasNecessarios(Tarefa tarefa, Engenheiro? engenheiro) {
