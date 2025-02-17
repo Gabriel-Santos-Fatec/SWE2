@@ -1,0 +1,208 @@
+import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart';
+import '../models/engenheiro.dart';
+import '../models/tarefa.dart';
+
+class DBHelper {
+  static Database? _database;
+
+  /// Retorna a instância do banco de dados, inicializando-o se necessário
+  Future<Database> get database async {
+    if (_database != null) return _database!;
+    _database = await _initDB();
+    return _database!;
+  }
+
+  /// Inicializa o banco de dados e cria as tabelas se necessário
+  Future<Database> _initDB() async {
+    String path = join(await getDatabasesPath(), 'projeto.db');
+    return await openDatabase(
+      path,
+      version: 2,
+      onCreate: (db, version) async {
+        await db.execute('''
+        CREATE TABLE Engenheiros (
+          Id INTEGER PRIMARY KEY AUTOINCREMENT,
+          Nome TEXT NOT NULL,
+          CargaMaxima INTEGER NOT NULL,
+          Eficiencia REAL NOT NULL
+        )
+      ''');
+        await db.execute('''
+        CREATE TABLE Tarefas (
+          Id INTEGER PRIMARY KEY AUTOINCREMENT,
+          Nome TEXT NOT NULL,
+          Prioridade TEXT NOT NULL,
+          Tempo INTEGER NOT NULL,
+          Status TEXT DEFAULT 'Pendente',
+          Inicio TEXT,
+          Conclusao TEXT,
+          IdEngenheiro INTEGER,
+          TempoTrabalhado REAL DEFAULT 0,
+          UltimaPausa TEXT,
+          FOREIGN KEY (IdEngenheiro) REFERENCES Engenheiros(Id) ON DELETE SET NULL
+        )
+      ''');
+      },
+    );
+  }
+
+  /// Insere um engenheiro na tabela Engenheiros
+  Future<int> inserirEngenheiro(Engenheiro engenheiro) async {
+    final db = await database;
+    return await db.insert('Engenheiros', engenheiro.toMap());
+  }
+
+  /// Insere uma tarefa na tabela Tarefas
+  Future<int> inserirTarefa(Tarefa tarefa) async {
+    final db = await database;
+    return await db.insert('Tarefas', tarefa.toMap());
+  }
+
+  /// Retorna a lista de engenheiros cadastrados
+  Future<List<Engenheiro>> listarEngenheiros() async {
+    final db = await database;
+    List<Map<String, dynamic>> maps = await db.query('Engenheiros');
+    return List.generate(maps.length, (i) => Engenheiro.fromMap(maps[i]));
+  }
+
+  /// Atualiza um engenheiro existente
+  Future<void> atualizarEngenheiro(Engenheiro engenheiro) async {
+    final db = await database;
+    await db.update(
+      'Engenheiros',
+      engenheiro.toMap(),
+      where: 'Id = ?',
+      whereArgs: [engenheiro.id],
+    );
+  }
+
+  /// Exclui um engenheiro pelo ID
+  Future<void> excluirEngenheiro(int id) async {
+    final db = await database;
+    await db.delete('Engenheiros', where: 'Id = ?', whereArgs: [id]);
+  }
+
+  /// Retorna a lista de tarefas cadastradas
+  Future<List<Tarefa>> listarTarefas() async {
+    final db = await database;
+    List<Map<String, dynamic>> maps = await db.query('Tarefas');
+    return List.generate(maps.length, (i) => Tarefa.fromMap(maps[i]));
+  }
+
+  /// Inicia uma tarefa sem sobrescrever o primeiro horário de início
+  Future<void> iniciarTarefa(int idTarefa) async {
+    final db = await database;
+    final List<Map<String, dynamic>> resultado = await db.query(
+      'Tarefas',
+      where: 'Id = ?',
+      whereArgs: [idTarefa],
+    );
+
+    if (resultado.isNotEmpty) {
+      final tarefa = resultado.first;
+      String? inicio = tarefa['Inicio'];
+
+      await db.update(
+        'Tarefas',
+        {
+          'Status': 'Em andamento',
+          'Inicio': inicio ?? DateTime.now().toIso8601String(),
+          'UltimaPausa': null,
+        },
+        where: 'Id = ?',
+        whereArgs: [idTarefa],
+      );
+    }
+  }
+
+  /// Marca uma tarefa como concluída
+  Future<void> concluirTarefa(int idTarefa) async {
+    final db = await database;
+    await db.update(
+      'Tarefas',
+      {'Status': 'Concluída', 'Conclusao': DateTime.now().toIso8601String()},
+      where: 'Id = ?',
+      whereArgs: [idTarefa],
+    );
+  }
+
+  /// Aloca uma tarefa para um engenheiro específico
+  Future<void> alocarTarefa(int idTarefa, int idEngenheiro) async {
+    final db = await database;
+    await db.update(
+      'Tarefas',
+      {'IdEngenheiro': idEngenheiro, 'Status': 'Pendente'},
+      where: 'Id = ?',
+      whereArgs: [idTarefa],
+    );
+  }
+
+  /// Atualiza os dados de uma tarefa
+  Future<void> atualizarTarefa(Tarefa tarefa) async {
+    final db = await database;
+    await db.update(
+      'Tarefas',
+      tarefa.toMap(),
+      where: 'Id = ?',
+      whereArgs: [tarefa.id],
+    );
+  }
+
+  /// Pausa uma tarefa e atualiza o tempo trabalhado
+  Future<void> pausarTarefaComTempo(
+    int idTarefa,
+    double tempoTrabalhado,
+  ) async {
+    final db = await database;
+    await db.update(
+      'Tarefas',
+      {
+        'Status': 'Pausada',
+        'TempoTrabalhado': tempoTrabalhado,
+        'UltimaPausa': DateTime.now().toIso8601String(),
+      },
+      where: 'Id = ?',
+      whereArgs: [idTarefa],
+    );
+  }
+
+  /// Obtém a carga de trabalho total de um engenheiro
+  Future<double> obterCargaEngenheiro(int idEngenheiro) async {
+    final db = await database;
+    List<Map<String, dynamic>> resultado = await db.rawQuery(
+      '''
+      SELECT SUM(TempoTrabalhado) as CargaTotal
+      FROM Tarefas
+      WHERE IdEngenheiro = ? AND Status IN ('Em andamento', 'Pausada')
+      ''',
+      [idEngenheiro],
+    );
+    return (resultado.first['CargaTotal'] ?? 0).toDouble();
+  }
+
+  /// Exclui uma tarefa pelo ID
+  Future<void> excluirTarefa(int id) async {
+    final db = await database;
+    await db.delete('Tarefas', where: 'Id = ?', whereArgs: [id]);
+  }
+
+  /// Obtém o total de tempo trabalhado no dia atual
+  Future<double> obterTempoTotalTrabalhadoHoje(int idEngenheiro) async {
+    final db = await database;
+    DateTime hoje = DateTime.now();
+    String dataHoje =
+        "${hoje.year}-${hoje.month.toString().padLeft(2, '0')}-${hoje.day.toString().padLeft(2, '0')}";
+
+    List<Map<String, dynamic>> resultado = await db.rawQuery(
+      '''
+    SELECT SUM(TempoTrabalhado) as TotalHoras
+    FROM Tarefas
+    WHERE IdEngenheiro = ? AND DATE(Inicio) = ?
+  ''',
+      [idEngenheiro, dataHoje],
+    );
+
+    return (resultado.first['TotalHoras'] ?? 0.0).toDouble();
+  }
+}
