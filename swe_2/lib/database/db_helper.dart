@@ -206,54 +206,6 @@ class DBHelper {
     );
   }
 
-  // Pausa uma tarefa, salva `ultimaPausa`, atualiza `tempoGastoHoje` e `tempoGasto`
-  Future<void> pausarTarefa(int idTarefa) async {
-    final db = await database;
-    final DateTime agora = DateTime.now();
-    final String dataHoje = agora.toIso8601String().split('T')[0];
-
-    final List<Map<String, dynamic>> resultado = await db.query(
-      'Tarefas',
-      where: 'Id = ?',
-      whereArgs: [idTarefa],
-    );
-
-    if (resultado.isNotEmpty) {
-      final tarefa = resultado.first;
-      DateTime? ultimoInicio =
-          tarefa['UltimoInicio'] != null
-              ? DateTime.parse(tarefa['UltimoInicio'])
-              : null;
-      int tempoGastoHoje = tarefa['TempoGastoHoje'] ?? 0;
-      int tempoGasto = tarefa['TempoGasto'] ?? 0;
-
-      if (ultimoInicio != null) {
-        int minutosGastos = agora.difference(ultimoInicio).inMinutes;
-        tempoGastoHoje += minutosGastos;
-        tempoGasto += minutosGastos;
-      }
-
-      // Se o dia mudou, zera `tempoGastoHoje`
-      String? ultimaAtualizacao = tarefa['DataUltimaAtualizacao'];
-      if (ultimaAtualizacao == null || ultimaAtualizacao != dataHoje) {
-        tempoGastoHoje = 0;
-      }
-
-      await db.update(
-        'Tarefas',
-        {
-          'Status': 'Pausada',
-          'UltimaPausa': agora.toIso8601String(), // Salva última pausa
-          'TempoGastoHoje': tempoGastoHoje,
-          'TempoGasto': tempoGasto,
-          'DataUltimaAtualizacao': dataHoje,
-        },
-        where: 'Id = ?',
-        whereArgs: [idTarefa],
-      );
-    }
-  }
-
   // Pausa uma tarefa e atualiza o tempo trabalhado
   Future<void> pausarTarefaComTempo(int idTarefa) async {
     final db = await database;
@@ -309,20 +261,6 @@ class DBHelper {
     }
   }
 
-  // Obtém a carga de trabalho total de um engenheiro
-  Future<double> obterCargaEngenheiro(int idEngenheiro) async {
-    final db = await database;
-    List<Map<String, dynamic>> resultado = await db.rawQuery(
-      '''
-      SELECT SUM(TempoTrabalhado) as CargaTotal
-      FROM Tarefas
-      WHERE IdEngenheiro = ? AND Status IN ('Em andamento', 'Pausada')
-      ''',
-      [idEngenheiro],
-    );
-    return (resultado.first['CargaTotal'] ?? 0).toDouble();
-  }
-
   // Exclui uma tarefa pelo ID
   Future<void> excluirTarefa(int id) async {
     final db = await database;
@@ -348,29 +286,7 @@ class DBHelper {
     return (resultado.first['TotalHoras'] ?? 0.0).toDouble();
   }
 
-  // Verifica se a última data registrada é de um dia diferente e caso for zera o campo
-  Future<void> zerarTempoGastoHoje() async {
-    final db = await database;
-
-    String dataHoje = DateTime.now().toIso8601String().substring(0, 10);
-
-    List<Map<String, dynamic>> resultado = await db.query(
-      'Tarefas',
-      columns: ['UltimaPausa'],
-      orderBy: 'UltimaPausa DESC',
-      limit: 1,
-    );
-    print(dataHoje);
-
-    if (resultado.isNotEmpty) {
-      String? ultimaData = resultado.first['UltimaPausa'];
-
-      if (ultimaData != null && ultimaData.substring(0, 10) != dataHoje) {
-        await db.update('Tarefas', {'TempoGastoHoje': 0});
-      }
-    }
-  }
-
+  // Zera o tempo gasto do dia por tarefa
   Future<void> zerarTempoGastoHojePorTarefa(int idTarefa) async {
     final db = await database;
     await db.update(

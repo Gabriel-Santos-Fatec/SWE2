@@ -41,7 +41,7 @@ class _TarefasAlocadasScreenState extends State<TarefasAlocadasScreen> {
     super.dispose();
   }
 
-  /// Carrega as tarefas e os engenheiros do banco de dados
+  // Carrega as tarefas e os engenheiros do banco de dados
   Future<void> _carregarTarefas() async {
     setState(() {
       _carregando = true;
@@ -61,7 +61,7 @@ class _TarefasAlocadasScreenState extends State<TarefasAlocadasScreen> {
     _atualizarTempoTarefasAtivas();
   }
 
-  /// Aloca tarefas automaticamente
+  // Aloca tarefas automaticamente
   Future<void> _alocarTarefas() async {
     setState(() {
       _carregando = true;
@@ -71,7 +71,7 @@ class _TarefasAlocadasScreenState extends State<TarefasAlocadasScreen> {
     await _carregarTarefas();
   }
 
-  /// Atualiza o tempo das tarefas em andamento
+  // Atualiza o tempo das tarefas em andamento
   void _atualizarTempoTarefasAtivas() async {
     setState(() {
       for (var tarefa in _tarefas) {
@@ -123,7 +123,7 @@ class _TarefasAlocadasScreenState extends State<TarefasAlocadasScreen> {
     }
   }
 
-  /// Inicia uma tarefa
+  // Inicia uma tarefa
   void _iniciarTarefa(int id) async {
     final tarefa = _tarefas.firstWhere((t) => t.id == id);
     final engenheiro = _engenheiros[tarefa.idEngenheiro];
@@ -155,7 +155,7 @@ class _TarefasAlocadasScreenState extends State<TarefasAlocadasScreen> {
     });
   }
 
-  /// Conclui uma tarefa
+  // Conclui uma tarefa
   void _concluirTarefa(int id) async {
     await _dbHelper.concluirTarefa(id);
 
@@ -166,7 +166,7 @@ class _TarefasAlocadasScreenState extends State<TarefasAlocadasScreen> {
     });
   }
 
-  /// Pausa uma tarefa
+  // Pausa uma tarefa
   void _pausarTarefa(int id) async {
     final tarefa = _tarefas.firstWhere((t) => t.id == id);
 
@@ -186,26 +186,26 @@ class _TarefasAlocadasScreenState extends State<TarefasAlocadasScreen> {
     }
   }
 
-  /// Formata o tempo trabalhado em horas e minutos
+  // Formata o tempo trabalhado em horas e minutos
   String _formatarDataInicio(DateTime? data) {
     if (data == null) return "Não iniciado";
     return DateFormat("dd/MM/yyyy HH:mm").format(data);
   }
 
-  /// Formata a data de conclusão
+  // Formata a data de conclusão
   String _formatarDataConclusao(DateTime? data) {
     if (data == null) return "Não concluído";
     return DateFormat("dd/MM/yyyy HH:mm").format(data);
   }
 
-  /// Formata o tempo trabalhado
+  // Formata o tempo trabalhado
   String _formatarTempoTrabalhado(double tempoTrabalhado) {
     int horas = tempoTrabalhado.floor();
     int minutos = ((tempoTrabalhado - horas) * 60).round();
     return "${horas}h ${minutos}min";
   }
 
-  /// Formata o tempo gasto
+  // Formata o tempo gasto
   String _formatarTempoGasto(int minutosTotais) {
     int horas = minutosTotais ~/ 60;
     int minutos = minutosTotais % 60;
@@ -313,8 +313,6 @@ class _TarefasAlocadasScreenState extends State<TarefasAlocadasScreen> {
 
                       String engenheiroResponsavel =
                           engenheiro != null ? engenheiro.nome : "Não alocado";
-                      print(tarefa.ultimaPausa);
-                      print(DateTime.now().toIso8601String());
                       return Card(
                         margin: EdgeInsets.all(8),
                         child: ListTile(

@@ -29,7 +29,7 @@ class Tarefa {
     this.tempoGasto = 0,
   });
 
-  /// Converte um `Map<String, dynamic>` (dados do banco) para um objeto `Tarefa`
+  // Converte um `Map<String, dynamic>` (dados do banco) para um objeto `Tarefa`
   factory Tarefa.fromMap(Map<String, dynamic> map) {
     return Tarefa(
       id: map['Id'],
@@ -58,7 +58,7 @@ class Tarefa {
     );
   }
 
-  /// Converte um objeto `Tarefa` para um `Map<String, dynamic>` (para salvar no banco)
+  // Converte um objeto `Tarefa` para um `Map<String, dynamic>` (para salvar no banco)
   Map<String, dynamic> toMap() {
     return {
       'Id': id,

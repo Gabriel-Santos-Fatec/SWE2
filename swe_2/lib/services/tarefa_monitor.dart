@@ -15,7 +15,7 @@ class TarefaMonitor {
     _iniciarMonitoramento();
   }
 
-  /// Inicia o monitoramento e verifica as tarefas a cada 15 segundos
+  // Inicia o monitoramento e verifica as tarefas a cada 15 segundos
   void _iniciarMonitoramento() {
     _timer?.cancel();
     _timer = Timer.periodic(Duration(seconds: 15), (timer) {
@@ -23,7 +23,7 @@ class TarefaMonitor {
     });
   }
 
-  /// Verifica todas as tarefas em andamento e pausa se necessário
+  // Verifica todas as tarefas em andamento e pausa se necessário
   Future<void> _verificarTarefasAtivas() async {
     await _verificarMudancaDeDia();
 
@@ -79,7 +79,7 @@ class TarefaMonitor {
     }
   }
 
-  /// Verifica se o dia mudou e zera o `tempoGastoHoje` das tarefas caso necessário
+  // Verifica se o dia mudou e zera o `tempoGastoHoje` das tarefas caso necessário
   Future<void> _verificarMudancaDeDia() async {
     DateTime hoje = DateTime.now();
     List<Tarefa> tarefas = await _dbHelper.listarTarefas();

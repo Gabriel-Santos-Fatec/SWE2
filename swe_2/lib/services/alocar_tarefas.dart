@@ -88,7 +88,7 @@ class AlocadorTarefas {
     }
   }
 
-  /// **Obtém os engenheiros que já estão ocupados com tarefas pendentes, em andamento ou pausadas**
+  // **Obtém os engenheiros que já estão ocupados com tarefas pendentes, em andamento ou pausadas**
   Future<Set<int>> _buscarEngenheirosOcupados() async {
     final db = await _dbHelper.database;
     List<Map<String, dynamic>> resultados = await db.rawQuery('''
@@ -103,7 +103,7 @@ class AlocadorTarefas {
         .toSet();
   }
 
-  /// **Obtém a contagem de tarefas alocadas por engenheiro diretamente do banco**
+  // **Obtém a contagem de tarefas alocadas por engenheiro diretamente do banco**
   Future<Map<int, int>> _contarTarefasPorEngenheiro(
     List<Engenheiro> engenheiros,
   ) async {
