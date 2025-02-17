@@ -26,9 +26,9 @@ class _ProgressoEngenheirosScreenState
     super.initState();
     _carregarDados();
 
-    _timer = Timer.periodic(Duration(minutes: 1), (timer) {
+    // Atualiza os dados a cada 15 segundos
+    _timer = Timer.periodic(Duration(seconds: 15), (timer) {
       _carregarDados();
-      _atualizarHorasTrabalhadas();
     });
   }
 
@@ -45,9 +45,7 @@ class _ProgressoEngenheirosScreenState
     Map<int, List<Tarefa>> tarefasEngenheiro = {};
 
     for (var engenheiro in engenheiros) {
-      double horas = await _dbHelper.obterTempoTotalTrabalhadoHoje(
-        engenheiro.id!,
-      );
+      double horas = _calcularTempoTrabalhadoHoje(engenheiro, tarefas);
       horasTrabalhadas[engenheiro.id!] = horas;
       tarefasEngenheiro[engenheiro.id!] =
           tarefas.where((t) => t.idEngenheiro == engenheiro.id).toList();
@@ -60,21 +58,30 @@ class _ProgressoEngenheirosScreenState
     });
   }
 
-  void _atualizarHorasTrabalhadas() {
-    setState(() {
-      for (var engenheiro in _engenheiros) {
-        double totalHoras = _horasTrabalhadas[engenheiro.id!] ?? 0;
+  /// Calcula a soma de `tempoGastoHoje` das tarefas do engenheiro.
+  /// Se a tarefa estiver em andamento, soma `agora - ultimoInicio`
+  double _calcularTempoTrabalhadoHoje(
+    Engenheiro engenheiro,
+    List<Tarefa> tarefas,
+  ) {
+    double totalMinutos = 0;
 
-        for (var tarefa in _tarefasEngenheiro[engenheiro.id!] ?? []) {
-          if (tarefa.status == "Em andamento" && tarefa.inicio != null) {
-            Duration tempoDecorrido = DateTime.now().difference(tarefa.inicio!);
-            totalHoras += tempoDecorrido.inMinutes / 60.0;
-          }
-        }
+    for (var tarefa in tarefas.where((t) => t.idEngenheiro == engenheiro.id)) {
+      double minutosGastosHoje = tarefa.tempoGastoHoje.toDouble();
 
-        _horasTrabalhadas[engenheiro.id!] = totalHoras;
+      if (tarefa.status == "Em andamento" &&
+          tarefa.ultimoInicio != null &&
+          (tarefa.ultimaPausa == null ||
+              tarefa.ultimoInicio!.isAfter(tarefa.ultimaPausa!))) {
+        int minutosDecorridos =
+            DateTime.now().difference(tarefa.ultimoInicio!).inMinutes;
+        minutosGastosHoje += minutosDecorridos;
       }
-    });
+
+      totalMinutos += minutosGastosHoje;
+    }
+
+    return totalMinutos / 60; // Converte minutos para horas
   }
 
   @override
@@ -83,106 +90,113 @@ class _ProgressoEngenheirosScreenState
       appBar: AppBar(title: Text("Progresso dos Engenheiros")),
       body:
           _engenheiros.isEmpty
-              ? Center(child: Text("Nenhum engenheiro encontrado"))
-              : ListView.builder(
-                itemCount: _engenheiros.length,
-                itemBuilder: (context, index) {
-                  Engenheiro engenheiro = _engenheiros[index];
-                  double horasTrabalhadas =
-                      _horasTrabalhadas[engenheiro.id!] ?? 0;
-                  double horasRestantes =
-                      engenheiro.cargaMaxima - horasTrabalhadas;
-
-                  if (horasRestantes < 0) horasRestantes = 0;
-
-                  return Card(
-                    margin: EdgeInsets.all(10),
-                    elevation: 4,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    child: Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text(
-                            engenheiro.nome,
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(height: 10),
-                          SizedBox(
-                            height: 150,
-                            width: 150,
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                _buildCircularChart(
-                                  horasTrabalhadas,
-                                  horasRestantes,
-                                ),
-                                Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      _formatarHorasMinutos(horasTrabalhadas),
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    Text(
-                                      "trabalhados",
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey[700],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          SizedBox(height: 10),
-                          horasRestantes == 0
-                              ? Text(
-                                "O engenheiro atingiu o limite diário",
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              )
-                              : Text(
-                                "Faltam ${_formatarHorasMinutos(horasRestantes)} para atingir o limite diário",
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                          SizedBox(height: 10),
-                          Divider(),
-                          Text(
-                            "Tarefas atribuídas:",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(height: 5),
-                          _buildListaTarefas(engenheiro),
-                        ],
-                      ),
-                    ),
-                  );
-                },
+              ? Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.blue.shade700,
+                      Colors.blue.shade400,
+                      Colors.blue.shade300,
+                    ],
+                  ),
+                ),
+                child: Center(child: Text("Nenhum engenheiro encontrado")),
+              )
+              : Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.blue.shade700,
+                      Colors.blue.shade400,
+                      Colors.blue.shade300,
+                    ],
+                  ),
+                ),
+                child: ListView.builder(
+                  itemCount: _engenheiros.length,
+                  itemBuilder: (context, index) {
+                    return _construirCardEngenheiro(_engenheiros[index]);
+                  },
+                ),
               ),
     );
   }
 
-  Widget _buildListaTarefas(Engenheiro engenheiro) {
+  Widget _construirCardEngenheiro(Engenheiro engenheiro) {
+    double horasTrabalhadas = _horasTrabalhadas[engenheiro.id!] ?? 0;
+    double horasRestantes = engenheiro.cargaMaxima - horasTrabalhadas;
+    if (horasRestantes < 0) horasRestantes = 0;
+
+    return Card(
+      margin: EdgeInsets.all(10),
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              engenheiro.nome,
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 10),
+            SizedBox(
+              height: 150,
+              width: 150,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  _construirGraficoCircular(horasTrabalhadas, horasRestantes),
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        _formatarHorasMinutos(horasTrabalhadas),
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        "trabalhados\nhoje",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 10),
+            horasRestantes == 0
+                ? Text(
+                  "O engenheiro atingiu o limite diário",
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                )
+                : Text(
+                  "Faltam ${_formatarHorasMinutos(horasRestantes)} para atingir o limite diário",
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                ),
+            SizedBox(height: 10),
+            Divider(),
+            Text(
+              "Tarefas atribuídas:",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 5),
+            _construirListaTarefas(engenheiro),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _construirListaTarefas(Engenheiro engenheiro) {
     List<Tarefa> tarefas = _tarefasEngenheiro[engenheiro.id!] ?? [];
 
     if (tarefas.isEmpty) {
@@ -200,41 +214,24 @@ class _ProgressoEngenheirosScreenState
           tarefas.map((tarefa) {
             double tempoEstimado = tarefa.tempo * (2 - engenheiro.eficiencia);
 
-            return Card(
-              margin: EdgeInsets.symmetric(vertical: 5, horizontal: 8),
-              elevation: 3,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      tarefa.nome,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    _buildInfoRow("Status: ${tarefa.status}"),
-                    _buildInfoRow(
-                      "Tempo da Tarefa: ${_formatarHorasMinutos(tarefa.tempo.toDouble())}",
-                    ),
-                    _buildInfoRow(
-                      "Estimado com eficiência: ${_formatarHorasMinutos(tempoEstimado)}",
-                    ),
-                  ],
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _construirLinhaInfo("Tarefa: ${tarefa.nome}"),
+                _construirLinhaInfo("Status: ${tarefa.status}"),
+                _construirLinhaInfo(
+                  "Tempo da Tarefa: ${_formatarHorasMinutos(tarefa.tempo.toDouble())}",
                 ),
-              ),
+                _construirLinhaInfo(
+                  "Estimado com eficiência: ${_formatarHorasMinutos(tempoEstimado)}",
+                ),
+              ],
             );
           }).toList(),
     );
   }
 
-  Widget _buildInfoRow(String text) {
+  Widget _construirLinhaInfo(String texto) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
@@ -243,12 +240,12 @@ class _ProgressoEngenheirosScreenState
             width: 8,
             height: 8,
             decoration: BoxDecoration(
-              color: Colors.blue, // Mesma cor do gráfico
+              color: Colors.blue,
               shape: BoxShape.circle,
             ),
           ),
           SizedBox(width: 8),
-          Expanded(child: Text(text, style: TextStyle(fontSize: 14))),
+          Expanded(child: Text(texto, style: TextStyle(fontSize: 14))),
         ],
       ),
     );
@@ -266,7 +263,10 @@ class _ProgressoEngenheirosScreenState
     }
   }
 
-  Widget _buildCircularChart(double horasTrabalhadas, double horasRestantes) {
+  Widget _construirGraficoCircular(
+    double horasTrabalhadas,
+    double horasRestantes,
+  ) {
     return PieChart(
       PieChartData(
         sectionsSpace: 0,

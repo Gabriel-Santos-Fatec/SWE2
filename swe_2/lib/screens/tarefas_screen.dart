@@ -38,12 +38,23 @@ class _TarefasScreenState extends State<TarefasScreen> {
 
     if (tarefa == null) {
       await _dbHelper.inserirTarefa(
-        Tarefa(nome: nome, prioridade: _prioridadeSelecionada, tempo: tempo),
+        Tarefa(
+          nome: nome,
+          prioridade: _prioridadeSelecionada,
+          tempo: tempo,
+          tempoGasto:
+              0, // Garantindo que novas tarefas comecem com 0 tempo gasto
+          tempoGastoHoje: 0, // Zera tempo gasto diário ao criar uma nova tarefa
+          ultimoInicio: null, // Nenhuma inicialização ainda
+          ultimaPausa: null, // Nenhuma pausa ainda
+        ),
       );
     } else {
       tarefa.nome = nome;
       tarefa.tempo = tempo;
       tarefa.prioridade = _prioridadeSelecionada;
+
+      // Garantindo que os campos adicionais sejam mantidos ao atualizar a tarefa
       await _dbHelper.atualizarTarefa(tarefa);
     }
 
@@ -77,11 +88,14 @@ class _TarefasScreenState extends State<TarefasScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context, false),
-                  child: Text("Cancelar"),
+                  child: Text(
+                    "Cancelar",
+                    style: TextStyle(color: Colors.black),
+                  ),
                 ),
                 ElevatedButton(
                   onPressed: () => Navigator.pop(context, true),
-                  child: Text("Excluir"),
+                  child: Text("Excluir", style: TextStyle(color: Colors.red)),
                 ),
               ],
             );

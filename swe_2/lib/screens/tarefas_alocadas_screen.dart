@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use
+// ignore_for_file: deprecated_member_use, use_build_context_synchronously
 
 import 'dart:async';
 import 'package:collection/collection.dart';
@@ -30,7 +30,7 @@ class _TarefasAlocadasScreenState extends State<TarefasAlocadasScreen> {
     super.initState();
     _alocarTarefas();
 
-    _timer = Timer.periodic(Duration(minutes: 1), (timer) {
+    _timer = Timer.periodic(Duration(seconds: 15), (timer) {
       _atualizarTempoTarefasAtivas();
     });
   }
@@ -72,30 +72,39 @@ class _TarefasAlocadasScreenState extends State<TarefasAlocadasScreen> {
   void _atualizarTempoTarefasAtivas() async {
     setState(() {
       for (var tarefa in _tarefas) {
-        if (tarefa.status == "Em andamento" && tarefa.inicio != null) {
-          Duration tempoDecorrido = DateTime.now().difference(tarefa.inicio!);
-          double tempoAtual = tempoDecorrido.inMinutes / 60.0;
+        if (tarefa.status == "Em andamento" && tarefa.ultimoInicio != null) {
+          int minutosDecorridos =
+              DateTime.now().difference(tarefa.ultimoInicio!).inMinutes;
 
-          tarefa.tempoTrabalhado = tempoAtual;
+          if (tarefa.ultimaPausa == null ||
+              tarefa.ultimoInicio!.isAfter(tarefa.ultimaPausa!)) {
+            tarefa.tempoTrabalhado =
+                (tarefa.tempoGastoHoje) + minutosDecorridos.toDouble();
+          }
         }
       }
     });
 
     for (var engenheiro in _engenheiros.values) {
-      double horasTrabalhadasHoje = await _dbHelper
-          .obterTempoTotalTrabalhadoHoje(engenheiro.id!);
+      int totalTempoGastoHoje = _tarefas
+          .where((tarefa) => tarefa.idEngenheiro == engenheiro.id)
+          .fold(0, (sum, tarefa) {
+            int tempoAtual = tarefa.tempoGastoHoje;
 
-      double tempoAtivoEngenheiro = _tarefas
-          .where(
-            (tarefa) =>
-                tarefa.idEngenheiro == engenheiro.id &&
-                tarefa.status == "Em andamento",
-          )
-          .fold(0.0, (sum, tarefa) => sum + (tarefa.tempoTrabalhado ?? 0));
+            if (tarefa.status == "Em andamento" &&
+                tarefa.ultimoInicio != null &&
+                (tarefa.ultimaPausa == null ||
+                    tarefa.ultimoInicio!.isAfter(tarefa.ultimaPausa!))) {
+              int minutosDecorridos =
+                  DateTime.now().difference(tarefa.ultimoInicio!).inMinutes;
+              tempoAtual += minutosDecorridos;
+            }
 
-      double cargaTotal = horasTrabalhadasHoje + tempoAtivoEngenheiro;
+            return sum + tempoAtual;
+          });
 
-      if (cargaTotal >= engenheiro.cargaMaxima) {
+      int cargaMaximaMinutos = (engenheiro.cargaMaxima * 60).toInt();
+      if (totalTempoGastoHoje * 60 >= cargaMaximaMinutos) {
         Tarefa? tarefaAtiva = _tarefas.firstWhereOrNull(
           (tarefa) =>
               tarefa.idEngenheiro == engenheiro.id &&
@@ -127,42 +136,48 @@ class _TarefasAlocadasScreenState extends State<TarefasAlocadasScreen> {
     );
 
     if (tempoTrabalhadoHoje >= engenheiro.cargaMaxima) {
-      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Engenheiro atingiu a carga máxima diária!")),
       );
       return;
     }
 
-    tarefa.inicio ??= DateTime.now();
-
     await _dbHelper.iniciarTarefa(id);
-    _carregarTarefas();
+
+    setState(() {
+      tarefa.status = "Em andamento";
+      tarefa.ultimoInicio = DateTime.now();
+      tarefa.inicio = DateTime.now();
+    });
   }
 
   void _concluirTarefa(int id) async {
     await _dbHelper.concluirTarefa(id);
-    _carregarTarefas();
+
+    setState(() {
+      final tarefa = _tarefas.firstWhere((t) => t.id == id);
+      tarefa.status = "Concluída";
+      tarefa.conclusao = DateTime.now();
+    });
   }
 
   void _pausarTarefa(int id) async {
     final tarefa = _tarefas.firstWhere((t) => t.id == id);
 
-    if (tarefa.inicio != null) {
-      Duration tempoDecorrido = DateTime.now().difference(tarefa.inicio!);
-      double tempoAtual = tempoDecorrido.inMinutes / 60.0;
-
-      double novoTempoTrabalhado = tempoAtual;
-
-      await _dbHelper.pausarTarefaComTempo(id, novoTempoTrabalhado);
+    if (tarefa.ultimoInicio != null) {
+      await _dbHelper.pausarTarefaComTempo(id);
 
       setState(() {
-        tarefa.tempoTrabalhado = novoTempoTrabalhado;
-        tarefa.status = "Pausada";
-        tarefa.inicio = null;
-      });
+        int minutosDecorridos =
+            DateTime.now().difference(tarefa.ultimoInicio!).inMinutes;
 
-      _carregarTarefas();
+        tarefa.tempoGastoHoje =
+            (tarefa.tempoGastoHoje ?? 0) + minutosDecorridos;
+        tarefa.tempoGasto = (tarefa.tempoGasto ?? 0) + minutosDecorridos;
+        tarefa.status = "Pausada";
+        tarefa.ultimoInicio = null;
+        tarefa.ultimaPausa = DateTime.now();
+      });
     }
   }
 
@@ -182,6 +197,19 @@ class _TarefasAlocadasScreenState extends State<TarefasAlocadasScreen> {
     return "${horas}h ${minutos}min";
   }
 
+  String _formatarTempoGasto(int minutosTotais) {
+    int horas = minutosTotais ~/ 60;
+    int minutos = minutosTotais % 60;
+
+    if (horas > 0 && minutos > 0) {
+      return "$horas h $minutos min";
+    } else if (horas > 0) {
+      return "$horas h";
+    } else {
+      return "$minutos min";
+    }
+  }
+
   double _calcularTempoPrevisto(Tarefa tarefa, Engenheiro? engenheiro) {
     if (engenheiro == null) return tarefa.tempo.toDouble();
 
@@ -193,6 +221,18 @@ class _TarefasAlocadasScreenState extends State<TarefasAlocadasScreen> {
 
     double tempoPrevisto = _calcularTempoPrevisto(tarefa, engenheiro);
     return (tempoPrevisto / engenheiro.cargaMaxima).ceil();
+  }
+
+  String _obterTempoTotalTrabalhado(Tarefa tarefa) {
+    int tempoGasto = tarefa.tempoGasto;
+
+    if (tarefa.status == "Em andamento" && tarefa.ultimoInicio != null) {
+      int minutosDecorridos =
+          DateTime.now().difference(tarefa.ultimoInicio!).inMinutes;
+      tempoGasto += minutosDecorridos;
+    }
+
+    return _formatarTempoGasto(tempoGasto);
   }
 
   @override
@@ -231,7 +271,12 @@ class _TarefasAlocadasScreenState extends State<TarefasAlocadasScreen> {
                       ],
                     ),
                   ),
-                  child: Center(child: Text("Nenhuma tarefa alocada")),
+                  child: Center(
+                    child: Text(
+                      "Nenhuma tarefa alocada",
+                      style: TextStyle(color: Colors.white70, fontSize: 18),
+                    ),
+                  ),
                 ),
               )
               : SafeArea(
@@ -256,11 +301,8 @@ class _TarefasAlocadasScreenState extends State<TarefasAlocadasScreen> {
 
                       String engenheiroResponsavel =
                           engenheiro != null ? engenheiro.nome : "Não alocado";
-
-                      String tempoTrabalhado = _formatarTempoTrabalhado(
-                        tarefa.tempoTrabalhado ?? 0,
-                      );
-
+                      print(tarefa.ultimaPausa);
+                      print(DateTime.now().toIso8601String());
                       return Card(
                         margin: EdgeInsets.all(8),
                         child: ListTile(
@@ -283,7 +325,9 @@ class _TarefasAlocadasScreenState extends State<TarefasAlocadasScreen> {
                               Text(
                                 "Tempo Previsto: ${_formatarTempoTrabalhado(_calcularTempoPrevisto(tarefa, engenheiro))} - ${_calcularDiasNecessarios(tarefa, engenheiro)} dia(s)",
                               ),
-                              Text("Tempo Trabalhado: $tempoTrabalhado"),
+                              Text(
+                                "Tempo Trabalhado: ${_obterTempoTotalTrabalhado(tarefa)}",
+                              ),
                             ],
                           ),
                           trailing: _botoesStatus(tarefa),

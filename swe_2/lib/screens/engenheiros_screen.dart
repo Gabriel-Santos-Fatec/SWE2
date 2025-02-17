@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import '../database/db_helper.dart';
 import '../models/engenheiro.dart';
@@ -7,7 +9,6 @@ class EngenheirosScreen extends StatefulWidget {
   const EngenheirosScreen({super.key});
 
   @override
-  // ignore: library_private_types_in_public_api
   _EngenheirosScreenState createState() => _EngenheirosScreenState();
 }
 
@@ -24,6 +25,7 @@ class _EngenheirosScreenState extends State<EngenheirosScreen> {
     _carregarEngenheiros();
   }
 
+  // Carrega a lista de engenheiros do banco de dados
   void _carregarEngenheiros() async {
     List<Engenheiro> lista = await _dbHelper.listarEngenheiros();
     setState(() {
@@ -31,6 +33,7 @@ class _EngenheirosScreenState extends State<EngenheirosScreen> {
     });
   }
 
+  // Salva um engenheiro novo ou atualiza um existente
   void _salvarEngenheiro({Engenheiro? engenheiro}) async {
     String nome = _nomeController.text.trim();
     int cargaMaxima = int.tryParse(_cargaMaximaController.text) ?? 8;
@@ -58,10 +61,10 @@ class _EngenheirosScreenState extends State<EngenheirosScreen> {
 
     _carregarEngenheiros();
     _limparCampos();
-    // ignore: use_build_context_synchronously
     Navigator.of(context).pop();
   }
 
+  // Preenche os campos e abre o modal de edição
   void _editarEngenheiro(Engenheiro engenheiro) {
     _nomeController.text = engenheiro.nome;
     _cargaMaximaController.text = engenheiro.cargaMaxima.toString();
@@ -72,16 +75,21 @@ class _EngenheirosScreenState extends State<EngenheirosScreen> {
   }
 
   void _excluirEngenheiro(int id) async {
-    await _dbHelper.excluirEngenheiro(id);
-    _carregarEngenheiros();
+    bool confirmar = await _confirmarExclusao();
+    if (confirmar) {
+      await _dbHelper.excluirEngenheiro(id);
+      _carregarEngenheiros();
+    }
   }
 
+  // Limpa os campos do formulário
   void _limparCampos() {
     _nomeController.clear();
     _cargaMaximaController.clear();
     _eficienciaController.clear();
   }
 
+  // Exibe o modal para cadastrar ou editar engenheiro
   void _mostrarDialogoCadastro([Engenheiro? engenheiro]) {
     bool boolErro = false;
     String mensagemErro = "";
@@ -183,6 +191,33 @@ class _EngenheirosScreenState extends State<EngenheirosScreen> {
     );
   }
 
+  Future<bool> _confirmarExclusao() async {
+    return await showDialog(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: Text("Excluir Tarefa"),
+              content: Text("Tem certeza que deseja excluir este engenheiro?"),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: Text(
+                    "Cancelar",
+                    style: TextStyle(color: Colors.black),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: Text("Excluir", style: TextStyle(color: Colors.red)),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
+  }
+
+  // Constrói um campo de entrada de texto
   Widget _buildTextField(
     TextEditingController controller,
     String label,

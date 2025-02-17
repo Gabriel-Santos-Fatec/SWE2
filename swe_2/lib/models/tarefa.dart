@@ -9,6 +9,9 @@ class Tarefa {
   int? idEngenheiro;
   double? tempoTrabalhado;
   DateTime? ultimaPausa;
+  DateTime? ultimoInicio;
+  int tempoGasto;
+  int tempoGastoHoje;
 
   Tarefa({
     this.id,
@@ -21,6 +24,9 @@ class Tarefa {
     this.idEngenheiro,
     this.tempoTrabalhado = 0.0,
     this.ultimaPausa,
+    this.ultimoInicio,
+    this.tempoGastoHoje = 0,
+    this.tempoGasto = 0,
   });
 
   /// Converte um `Map<String, dynamic>` (dados do banco) para um objeto `Tarefa`
@@ -43,9 +49,16 @@ class Tarefa {
           map['UltimaPausa'] != null
               ? DateTime.parse(map['UltimaPausa'])
               : null,
+      ultimoInicio:
+          map['UltimoInicio'] != null
+              ? DateTime.parse(map['UltimoInicio'])
+              : null,
+      tempoGastoHoje: map['TempoGastoHoje'] ?? 0,
+      tempoGasto: map['TempoGasto'] ?? 0,
     );
   }
 
+  /// Converte um objeto `Tarefa` para um `Map<String, dynamic>` (para salvar no banco)
   Map<String, dynamic> toMap() {
     return {
       'Id': id,
@@ -58,6 +71,9 @@ class Tarefa {
       'IdEngenheiro': idEngenheiro,
       'TempoTrabalhado': tempoTrabalhado,
       'UltimaPausa': ultimaPausa?.toIso8601String(),
+      'UltimoInicio': ultimoInicio?.toIso8601String(),
+      'TempoGastoHoje': tempoGastoHoje,
+      'TempoGasto': tempoGasto,
     };
   }
 }
